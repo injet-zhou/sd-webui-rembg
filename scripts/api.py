@@ -15,6 +15,9 @@ import rembg
 #     "silueta",
 # ]
 
+from modules.shared import state
+from modules.call_queue import queue_lock
+
 
 def rembg_api(_: gr.Blocks, app: FastAPI):
     @app.post("/rembg")
@@ -28,21 +31,30 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
         alpha_matting_erode_size: int = Body(10, title='alpha matting erode size')
     ):
         if not model or model == "None":
-            return
+            model = 'u2net'
 
-        input_image = api.decode_base64_to_image(input_image)
+        try:
+            state.begin()
+            state.job_count = 1
 
-        image = rembg.remove(
-            input_image,
-            session=rembg.new_session(model),
-            only_mask=return_mask,
-            alpha_matting=alpha_matting,
-            alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
-            alpha_matting_background_threshold=alpha_matting_background_threshold,
-            alpha_matting_erode_size=alpha_matting_erode_size,
-        )
+            input_image = api.decode_base64_to_image(input_image)
 
-        return {"image": api.encode_pil_to_base64(image).decode("utf-8")}
+            with queue_lock:
+                image = rembg.remove(
+                    input_image,
+                    session=rembg.new_session(model),
+                    only_mask=return_mask,
+                    alpha_matting=alpha_matting,
+                    alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
+                    alpha_matting_background_threshold=alpha_matting_background_threshold,
+                    alpha_matting_erode_size=alpha_matting_erode_size,
+                )
+
+            state.end()
+            return {"code": 200, "message": "success", "image": api.encode_pil_to_base64(image).decode("utf-8")}
+        except Exception as e:
+            state.end()
+            return {"code": 500, "message": str(e), "image": ""}
 
 try:
     import modules.script_callbacks as script_callbacks
