@@ -56,7 +56,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
 
             input_image = api.decode_base64_to_image(input_image)
             use_mask = mask is not None and mask != ""
-            mask = api.decode_base64_to_image(mask) if use_mask else None
+            mask = api.decode_base64_to_image(mask).convert("RGBA") if use_mask else None
             if use_mask and not is_black_and_white(mask):
                 return {"code": 400, "message": "mask is not black and white", "image": ""}
             if use_mask:
