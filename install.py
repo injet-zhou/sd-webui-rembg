@@ -17,5 +17,3 @@ if not launch.is_installed("rembg"):
 for dep in ['onnxruntime' if not use_gpu else 'onnxruntime-gpu', 'pymatting', 'pooch']:
     if not launch.is_installed(dep):
         launch.run_pip(f"install {dep}", f"{dep} for REMBG extension")
-
-os.environ["U2NET_HOME"] = "~/stable-diffusion-webui/models/other/rembg"

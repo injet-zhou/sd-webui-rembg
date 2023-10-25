@@ -4,42 +4,39 @@ from modules.api.models import *
 from modules.api import api
 import gradio as gr
 from PIL import Image
-import numpy as np
 import rembg
 from modules.shared import state
 from modules.call_queue import queue_lock
 
-
-def is_black_and_white(image):
-    arr = np.array(image)
-    for i in range(arr.shape[0]):
-        for j in range(arr.shape[1]):
-            r, g, b = arr[i, j, :3]
-            if r != g or g != b:
-                return False
-    return True
+sessions = {}
 
 
-def white_to_transparent(mask: Image) -> Image:
-    # 将白色像素全部转成透明
-    arr = np.array(mask)
-    for i in range(arr.shape[0]):
-        for j in range(arr.shape[1]):
-            r, g, b, a = arr[i, j, :]
-            if r == 255 and g == 255 and b == 255:
-                arr[i, j, :] = [255, 255, 255, 0]
-    return Image.fromarray(arr)
+def session_factory(model: str):
+    if model not in sessions:
+        sessions[model] = rembg.new_session(model)
+    return sessions[model]
 
 
-def crop_img(origin: Image, mask: Image):
-    return origin.crop(mask.getbbox())
+def box_validate(box: list, image: Image):
+    w, h = image.size
+    if len(box) != 4:
+        return f'box length must be 4, but got {len(box)}'
+    for i in box:
+        if not isinstance(i, int):
+            return f'box must be int, but got {type(i)}'
+    x, y, x1, y1 = box
+    if x < 0 or x1 > w or y < 0 or y1 > h:
+        return f'box must be in image range, but got {box}'
+    if x > x1 or y > y1:
+        return f'box invalid'
+    return None
 
 
 def rembg_api(_: gr.Blocks, app: FastAPI):
     @app.post("/rembg")
     async def rembg_remove(
             input_image: str = Body("", title='rembg input image'),
-            mask: str = Body("", title="mask to crop input image"),
+            box: list = Body([], title="crop box"),
             model: str = Body("u2net", title='rembg model'),
             return_mask: bool = Body(False, title='return mask'),
             alpha_matting: bool = Body(False, title='alpha matting'),
@@ -55,18 +52,17 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             state.job_count = 1
 
             input_image = api.decode_base64_to_image(input_image)
-            use_mask = mask is not None and mask != ""
-            mask = api.decode_base64_to_image(mask).convert("RGBA") if use_mask else None
-            if use_mask and not is_black_and_white(mask):
-                return {"code": 400, "message": "mask is not black and white", "image": ""}
-            if use_mask:
-                input_image = crop_img(input_image, white_to_transparent(mask))
+            if box and type(box) == list and len(box) != 0:
+                validate_msg = box_validate(box, input_image)
+                if validate_msg:
+                    return {"code": 400, "message": validate_msg, "image": ""}
+                input_image = input_image.crop((box[0], box[1], box[2], box[3]))
 
             with queue_lock:
                 image = rembg.remove(
                     input_image,
-                    session=rembg.new_session(model),
-                    only_mask=return_mask,
+                    session=session_factory(model),
+                    only_mask=False,
                     alpha_matting=alpha_matting,
                     alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
                     alpha_matting_background_threshold=alpha_matting_background_threshold,
