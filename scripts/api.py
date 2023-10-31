@@ -48,8 +48,8 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             model = 'u2net'
 
         try:
-            state.begin()
-            state.job_count = 1
+            # state.begin()
+            # state.job_count = 1
 
             input_image = api.decode_base64_to_image(input_image)
             if box and type(box) == list and len(box) != 0:
@@ -69,10 +69,10 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
                     alpha_matting_erode_size=alpha_matting_erode_size,
                 )
 
-            state.end()
+            # state.end()
             return {"code": 200, "message": "success", "image": api.encode_pil_to_base64(image).decode("utf-8")}
         except Exception as e:
-            state.end()
+            # state.end()
             traceback.print_exc()
             return {"code": 500, "message": f'Exception in rembg: {e}', "image": ""}
 
