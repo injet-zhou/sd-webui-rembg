@@ -36,7 +36,7 @@ def box_validate(box: list, image: Image):
 
 def detect_model(img: Image.Image)-> str:
     scores = anime_classify_score(image=img, model_name='caformer_s36_plus')
-    threeD = scores['3D']
+    threeD = scores['3d']
     comic = scores['comic']
     bangumi = scores['bangumi']
     print(f"3D: {threeD}, comic: {comic}, bangumi: {bangumi}")
