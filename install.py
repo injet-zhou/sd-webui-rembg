@@ -17,3 +17,6 @@ if not launch.is_installed("rembg"):
 for dep in ['onnxruntime' if not use_gpu else 'onnxruntime-gpu', 'pymatting', 'pooch']:
     if not launch.is_installed(dep):
         launch.run_pip(f"install {dep}", f"{dep} for REMBG extension")
+
+if not launch.is_installed("dghs-imgutils"):
+    launch.run_pip(f'install dghs-imgutils{"[gpu]" if use_gpu else ""}', f'dghs-imgutils{"[gpu]" if use_gpu else ""}')

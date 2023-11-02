@@ -8,6 +8,8 @@ import rembg
 from modules.shared import state
 from modules.call_queue import queue_lock
 
+from imgutils.validate import anime_classify_score
+
 sessions = {}
 
 
@@ -32,6 +34,20 @@ def box_validate(box: list, image: Image):
     return None
 
 
+def detect_model(img: Image.Image)-> str:
+    scores = anime_classify_score(image=img, model_name='caformer_s36_plus')
+    threeD = scores['3D']
+    comic = scores['comic']
+    bangumi = scores['bangumi']
+    print(f"3D: {threeD}, comic: {comic}, bangumi: {bangumi}")
+    if threeD == 0:
+        return "isnet-anime"
+    final_score = (comic + bangumi) / threeD
+    if final_score > 1:
+        return "isnet-anime"
+    return 'silueta'
+
+
 def rembg_api(_: gr.Blocks, app: FastAPI):
     @app.post("/rembg")
     async def rembg_remove(
@@ -48,8 +64,6 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             model = 'u2net'
 
         try:
-            # state.begin()
-            # state.job_count = 1
 
             input_image = api.decode_base64_to_image(input_image)
             if box and type(box) == list and len(box) != 0:
@@ -59,9 +73,13 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
                 input_image = input_image.crop((box[0], box[1], box[2], box[3]))
 
             with queue_lock:
+                detect_model_name = detect_model(input_image)
+                print(f'use model: {detect_model_name}')
+                if detect_model_name == 'isnet-anime':
+                    alpha_matting = False
                 image = rembg.remove(
                     input_image,
-                    session=session_factory(model),
+                    session=session_factory(detect_model_name),
                     only_mask=False,
                     alpha_matting=alpha_matting,
                     alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
