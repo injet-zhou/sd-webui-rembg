@@ -12,6 +12,9 @@ from imgutils.validate import anime_classify_score
 
 sessions = {}
 
+general_model = 'isnet-general-use'
+anime_model = 'isnet-anime'
+
 
 def session_factory(model: str):
     if model not in sessions:
@@ -35,17 +38,21 @@ def box_validate(box: list, image: Image):
 
 
 def detect_model(img: Image.Image)-> str:
-    scores = anime_classify_score(image=img, model_name='caformer_s36_plus')
-    threeD = scores['3d']
-    comic = scores['comic']
-    bangumi = scores['bangumi']
-    print(f"3D: {threeD}, comic: {comic}, bangumi: {bangumi}")
-    if threeD == 0:
-        return "isnet-anime"
-    final_score = (comic + bangumi) / threeD
-    if final_score > 1:
-        return "isnet-anime"
-    return 'silueta'
+    try:
+        scores = anime_classify_score(image=img, model_name='caformer_s36_plus')
+        threeD = scores['3d']
+        comic = scores['comic']
+        bangumi = scores['bangumi']
+        print(f"3D: {threeD}, comic: {comic}, bangumi: {bangumi}")
+        if threeD == 0:
+            return anime_model
+        final_score = (comic + bangumi) / threeD
+        if final_score > 1:
+            return anime_model
+    except Exception as e:
+        print(f"Exception in anime_classify_score: {e}")
+        traceback.print_exc()
+    return general_model
 
 
 def rembg_api(_: gr.Blocks, app: FastAPI):
@@ -75,7 +82,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             with queue_lock:
                 detect_model_name = detect_model(input_image)
                 print(f'use model: {detect_model_name}')
-                if detect_model_name == 'isnet-anime':
+                if detect_model_name == anime_model:
                     alpha_matting = False
                 image = rembg.remove(
                     input_image,
