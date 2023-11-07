@@ -213,7 +213,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
         if not positive_points and not negative_points:
             return {"code": 400, "message": "positive_points and negative_points must be both not empty", "image": ""}
         try:
-            
+            input_image = api.decode_base64_to_image(input_image)
             validate_msg = validate_input_points(positive_points, negative_points, input_image)
             if validate_msg:
                 return {"code": 400, "message": validate_msg, "image": ""}
@@ -227,7 +227,6 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             for point in negative_points:
                 input_points.append(point)
                 input_labels.append(2)
-            input_image = api.decode_base64_to_image(input_image)
             with queue_lock:
                 detect_model_name = detect_model(input_image)
                 if detect_model_name == anime_model and auto:
