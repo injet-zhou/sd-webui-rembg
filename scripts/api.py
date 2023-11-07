@@ -219,14 +219,17 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
                 return {"code": 400, "message": validate_msg, "image": ""}
             
             session = session_factory('sam')
-            input_points = []
-            input_labels = []
+            # input_points = []
+            # input_labels = []
+            sam_prompt = []
             for point in positive_points:
-                input_points.append(point)
-                input_labels.append(1)
+                # input_points.append(point)
+                # input_labels.append(1)
+                sam_prompt.append({"type": "point", "data": point, "label": 1})
             for point in negative_points:
-                input_points.append(point)
-                input_labels.append(2)
+                # input_points.append(point)
+                # input_labels.append(2)
+                sam_prompt.append({"type": "point", "data": point, "label": 0})
             with queue_lock:
                 detect_model_name = detect_model(input_image)
                 if detect_model_name == anime_model and auto:
@@ -234,13 +237,14 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
                 image = rembg.remove(
                     input_image,
                     session=session,
-                    input_points=np.array(input_points),
-                    input_labels=np.array(input_labels),
+                    # input_points=np.array(input_points),
+                    # input_labels=np.array(input_labels),
                     only_mask=return_mask,
                     alpha_matting=alpha_matting,
                     alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
                     alpha_matting_background_threshold=alpha_matting_background_threshold,
                     alpha_matting_erode_size=alpha_matting_erode_size,
+                    sam_prompt=sam_prompt,
                 )
             return {"code": 200, "message": "success", "image": api.encode_pil_to_base64(image).decode("utf-8")}
         except Exception as e:
