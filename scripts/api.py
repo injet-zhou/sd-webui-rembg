@@ -161,7 +161,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             traceback.print_exc()
             return {"code": 500, "message": f'Exception in rembg: {e}', "image": ""}
 
-    @app.post("/rembg_batch")
+    @app.post("/rembg/batch")
     def rembg_bath_api(
         input_images: list = Body([], title='rembg input images'),
         return_mask: bool = Body(False, title='return mask'),
@@ -176,7 +176,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
     ):
         if not input_images or type(input_images) != list or len(input_images) == 0:
             return {"code": 400, "message": "input_images must be list and not empty", "images": []}
-        images = [api.encode_base64_to_image(i) for i in input_images]
+        images = [api.decode_base64_to_image(i) for i in input_images]
         try:
             with queue_lock:
                 res = rembg_batch(
@@ -194,7 +194,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             traceback.print_exc()
             return {"code": 500, "message": f'Exception in rembg: {e}', "images": []}
         
-    @app.post("/rembg_advanced")
+    @app.post("/rembg/advanced")
     def rembg_advanced(
         input_image: str = Body("", title='rembg input image'),
         positive_points: list = Body([], title="positive points"),
