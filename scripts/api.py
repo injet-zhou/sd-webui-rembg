@@ -43,7 +43,7 @@ def detect_model(img: Image.Image)-> str:
         threeD = scores['3d']
         comic = scores['comic']
         bangumi = scores['bangumi']
-        print(f"3D: {threeD}, comic: {comic}, bangumi: {bangumi}")
+        # print(f"3D: {threeD}, comic: {comic}, bangumi: {bangumi}")
         if threeD == 0:
             return anime_model
         final_score = (comic + bangumi) / threeD
@@ -62,6 +62,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             box: list = Body([], title="crop box"),
             model: str = Body("u2net", title='rembg model'),
             return_mask: bool = Body(False, title='return mask'),
+            auto: bool = Body(True, title='auto detect anime'),
             alpha_matting: bool = Body(False, title='alpha matting'),
             alpha_matting_foreground_threshold: int = Body(240, title='alpha matting foreground threshold'),
             alpha_matting_background_threshold: int = Body(10, title='alpha matting background threshold'),
@@ -82,12 +83,12 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
             with queue_lock:
                 detect_model_name = detect_model(input_image)
                 print(f'use model: {detect_model_name}')
-                if detect_model_name == anime_model:
+                if detect_model_name == anime_model and auto:
                     alpha_matting = False
                 image = rembg.remove(
                     input_image,
                     session=session_factory(detect_model_name),
-                    only_mask=False,
+                    only_mask=return_mask,
                     alpha_matting=alpha_matting,
                     alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
                     alpha_matting_background_threshold=alpha_matting_background_threshold,
