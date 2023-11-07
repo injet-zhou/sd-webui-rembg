@@ -146,7 +146,7 @@ def rembg_api(_: gr.Blocks, app: FastAPI):
                 # if detect_model_name == anime_model and auto:
                 #     alpha_matting = False
                 res = rembg_batch(
-                    input_image,
+                    [input_image],
                     return_mask=return_mask,
                     alpha_matting=alpha_matting,
                     alpha_matting_foreground_threshold=alpha_matting_foreground_threshold,
